@@ -1,0 +1,733 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connect — Real-Time Chat</title>
+
+<style>
+:root {
+    --primary:#4f46e5;
+    --light:#eef2ff;
+    --bg:#f4f6fb;
+    --text:#182230;
+    --muted:#8490a3;
+    --border:#e8ecf3;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input{font:inherit}
+button{cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+.login-screen{min-height:100vh;display:grid;place-items:center;padding:24px;background:linear-gradient(135deg,#eef2ff,#f8fafc)}
+.login-card{background:white;width:100%;max-width:420px;padding:36px;border-radius:20px;box-shadow:0 20px 60px #202d5015}
+.brand{display:flex;align-items:center;gap:12px;font-size:23px;font-weight:750}
+.brand-icon{display:grid;place-items:center;width:43px;height:43px;color:white;background:var(--primary);border-radius:13px}
+.login-card h1{margin:30px 0 8px;font-size:27px}
+.muted{color:var(--muted);line-height:1.6}
+.field{width:100%;padding:13px 15px;border:1px solid #dce2ed;border-radius:10px;outline:none;background:white;color:var(--text)}
+.field:focus{border-color:var(--primary);box-shadow:0 0 0 3px #4f46e51a}
+.primary-btn{border:0;background:var(--primary);color:white;padding:12px 16px;border-radius:10px;font-weight:650}
+.primary-btn:hover{background:#4338ca}
+.login-card .primary-btn{width:100%;margin-top:14px}
+#loginError{color:#dc2626;font-size:13px;margin-top:10px}
+.app{display:none;height:100vh;min-height:500px;padding:22px}
+.dashboard{display:flex;max-width:1440px;height:100%;margin:auto;overflow:hidden;background:white;border:1px solid var(--border);border-radius:20px;box-shadow:0 12px 45px #1725540b}
+.sidebar{width:270px;min-width:235px;border-right:1px solid var(--border);display:flex;flex-direction:column}
+.sidebar-brand{padding:25px 22px;border-bottom:1px solid var(--border)}
+.workspace-label{margin:27px 20px 12px;color:var(--muted);font-size:11px;font-weight:750;letter-spacing:1.3px}
+.nav-item{margin:0 12px;padding:13px 14px;border-radius:10px;display:flex;align-items:center;gap:12px;font-size:14px}
+.nav-item.active{background:var(--light);color:var(--primary);font-weight:650}
+.online-heading{display:flex;justify-content:space-between;align-items:center;margin:28px 20px 12px;font-size:12px;font-weight:700}
+.count{color:#059669;background:#d1fae5;padding:3px 8px;border-radius:20px;font-size:11px}
+.user-list{padding:0 12px;overflow-y:auto}
+.user-row{display:flex;align-items:center;gap:10px;padding:10px 8px}
+.avatar{width:38px;height:38px;flex-shrink:0;display:grid;place-items:center;border-radius:12px;background:#e0e7ff;color:#4338ca;font-weight:750}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:13px;font-weight:650;overflow-wrap:anywhere}
+.user-status{font-size:11px;color:var(--muted);margin-top:4px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#10b981;margin-right:5px}
+.sidebar-bottom{margin-top:auto;border-top:1px solid var(--border);padding:17px;font-size:12px;color:var(--muted)}
+.main{display:flex;flex:1;flex-direction:column;min-width:0}
+.topbar{min-height:80px;padding:18px 25px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:15px}
+.chat-title{font-weight:750;font-size:17px}
+.chat-subtitle{color:var(--muted);font-size:12px;margin-top:5px}
+.connection{display:flex;align-items:center;gap:7px;color:#059669;font-size:12px;white-space:nowrap}
+.messages{flex:1;min-height:0;padding:25px;overflow-y:auto;background:#fbfcfe;display:flex;flex-direction:column;gap:15px}
+.welcome{margin:auto;text-align:center;color:var(--muted);max-width:340px;line-height:1.7}
+.welcome-icon{font-size:36px}
+.system-message{align-self:center;color:#718096;background:#edf1f7;padding:7px 14px;border-radius:20px;font-size:11px;text-align:center}
+.message{max-width:min(78%,600px);display:flex;flex-direction:column;gap:5px;align-self:flex-start}
+.message.mine{align-self:flex-end}
+.message-meta{display:flex;align-items:center;gap:9px;font-size:12px;padding:0 4px}
+.message-name{font-weight:750;color:#475569}
+.mine .message-name{color:var(--primary)}
+.message-time{color:var(--muted);font-size:10px}
+.message-bubble{background:white;border:1px solid var(--border);padding:12px 15px;border-radius:5px 15px 15px 15px;line-height:1.5;font-size:14px;overflow-wrap:anywhere;white-space:pre-wrap;box-shadow:0 2px 5px #17255405}
+.mine .message-bubble{background:var(--light);border-color:#d9ddff;border-radius:15px 5px 15px 15px}
+.media-preview{display:block;max-width:100%;max-height:330px;border-radius:8px;object-fit:contain}
+video.media-preview{width:min(440px,100%);background:#111}
+audio.media-preview{width:min(340px,100%)}
+.composer-area{padding:15px 20px;border-top:1px solid var(--border);background:white}
+.composer{display:flex;align-items:center;gap:9px}
+.composer .field{flex:1;min-width:0}
+.icon-btn{border:1px solid var(--border);background:#f8fafc;color:#475569;border-radius:10px;padding:11px 12px;font-size:18px}
+.icon-btn:hover{background:var(--light)}
+.send-btn{white-space:nowrap}
+.media-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px}
+.tool-note{font-size:11px;color:var(--muted)}
+#mediaStatus{font-size:12px;color:var(--muted);margin-top:8px;overflow-wrap:anywhere}
+#selectedPreview{display:none;max-width:220px;max-height:130px;margin-top:10px;border-radius:8px}
+#recordingStatus{font-size:12px;color:#dc2626}
+@media(max-width:760px){
+ .app{padding:0;min-height:0}
+ .dashboard{border-radius:0;border:0}
+ .sidebar{width:66px;min-width:66px}
+ .sidebar-brand{padding:15px 10px}
+ .sidebar-brand .brand{justify-content:center}
+ .brand-text,.workspace-label,.nav-text,.online-heading,.user-info,.sidebar-bottom{display:none}
+ .nav-item{margin:8px;padding:12px;justify-content:center}
+ .user-list{padding:0 8px}
+ .user-row{padding:7px 0;justify-content:center}
+ .avatar{width:35px;height:35px}
+ .topbar{padding:14px}
+ .messages{padding:14px 9px}
+ .message{max-width:92%}
+ .composer-area{padding:10px}
+ .icon-btn{padding:10px}
+ .send-btn{padding:12px}
+}
+</style>
+</head>
+
+<body>
+<section class="login-screen" id="loginScreen">
+ <div class="login-card">
+  <div class="brand"><div class="brand-icon">C</div><span>Connect</span></div>
+  <h1>Welcome back 👋</h1>
+  <p class="muted">Join your team conversation and connect in real time.</p>
+  <form id="loginForm">
+   <label for="username" class="muted" style="display:block;margin:20px 0 8px;font-size:13px">Your display name</label>
+   <input id="username" class="field" maxlength="25" placeholder="Enter your name" autocomplete="nickname" required>
+   <button class="primary-btn" id="joinBtn" type="submit">Join conversation →</button>
+   <div id="loginError"></div>
+  </form>
+ </div>
+</section>
+
+<section class="app" id="chatApp">
+ <div class="dashboard">
+  <aside class="sidebar">
+   <div class="sidebar-brand"><div class="brand"><div class="brand-icon">C</div><span class="brand-text">Connect</span></div></div>
+   <div class="workspace-label">WORKSPACE</div>
+   <div class="nav-item active"><span>▤</span><span class="nav-text">Messages</span></div>
+   <div class="nav-item"><span>◎</span><span class="nav-text">Live chat room</span></div>
+   <div class="online-heading"><span>ONLINE MEMBERS</span><span class="count" id="userCount">0</span></div>
+   <div class="user-list" id="userList"></div>
+   <div class="sidebar-bottom">● Real-time connection<br><br>Powered by Java &amp; Spring Boot</div>
+  </aside>
+
+  <main class="main">
+   <header class="topbar">
+    <div><div class="chat-title">General Conversation</div><div class="chat-subtitle">Chat with everyone in your room</div></div>
+    <div class="connection" id="connectionStatus"><span class="dot"></span> Connecting</div>
+   </header>
+
+   <div class="messages" id="messages">
+    <div class="welcome" id="welcome"><div class="welcome-icon">💬</div><strong>Welcome to Connect</strong><br>Your conversations will appear here.<br>Say hello to get started!</div>
+   </div>
+
+   <footer class="composer-area">
+    <form class="composer" id="chatForm">
+     <input id="messageInput" class="field" placeholder="Write a message..." maxlength="2000" autocomplete="off" aria-label="Message">
+     <button class="icon-btn" type="button" id="attachBtn" title="Attach image, video, or audio" aria-label="Attach media">📎</button>
+     <button class="primary-btn send-btn" id="sendBtn" type="submit">Send ↑</button>
+    </form>
+
+    <div class="media-tools">
+     <span class="tool-note">Attach:</span>
+     <button class="icon-btn" type="button" id="imageBtn" title="Choose image">🖼️</button>
+     <button class="icon-btn" type="button" id="videoBtn" title="Choose video">🎥</button>
+     <button class="icon-btn" type="button" id="audioBtn" title="Choose audio">🎵</button>
+     <button class="icon-btn" type="button" id="recordBtn" title="Record voice message">🎙️ Record voice</button>
+     <button class="icon-btn" type="button" id="stopRecordBtn" hidden>⏹ Stop</button>
+     <span id="recordingStatus"></span>
+    </div>
+
+    <input id="mediaInput" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/ogg,audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/ogg,audio/webm,audio/mp4,audio/aac,audio/3gpp,audio/flac" hidden>
+    <img id="selectedPreview" alt="Selected media preview">
+    <div id="mediaStatus" role="status">Images, videos, and audio up to 25 MB per file.</div>
+   </footer>
+  </main>
+ </div>
+</section>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+
+const loginScreen = $("loginScreen");
+const chatApp = $("chatApp");
+const loginForm = $("loginForm");
+const usernameInput = $("username");
+const loginError = $("loginError");
+const joinBtn = $("joinBtn");
+const messages = $("messages");
+const messageInput = $("messageInput");
+const chatForm = $("chatForm");
+const sendBtn = $("sendBtn");
+const userList = $("userList");
+const userCount = $("userCount");
+const connectionStatus = $("connectionStatus");
+const mediaInput = $("mediaInput");
+const mediaStatus = $("mediaStatus");
+const selectedPreview = $("selectedPreview");
+const recordBtn = $("recordBtn");
+const stopRecordBtn = $("stopRecordBtn");
+const recordingStatus = $("recordingStatus");
+
+let username = "";
+let socket = null;
+let onlineUsers = [];
+let selectedFile = null;
+let selectedType = null;
+let previewUrl = null;
+let mediaRecorder = null;
+let recordingStream = null;
+let recordingChunks = [];
+let recordingActive = false;
+let pendingRecording = false;
+let joining = false;
+
+const MAX_BYTES = 25 * 1024 * 1024;
+
+const allowedMime = {
+ image: ["image/jpeg","image/png","image/webp","image/gif"],
+ video: ["video/mp4","video/webm","video/ogg"],
+ audio: [
+  "audio/mpeg","audio/mp3","audio/wav","audio/x-wav",
+  "audio/ogg","audio/webm","audio/mp4","audio/aac",
+  "audio/3gpp","audio/flac"
+ ]
+};
+
+function setStatus(connected) {
+ connectionStatus.replaceChildren();
+ const dot = document.createElement("span");
+ dot.className = "dot";
+ dot.style.background = connected ? "#10b981" : "#ef4444";
+ connectionStatus.append(dot, document.createTextNode(connected ? " Connected" : " Disconnected"));
+ sendBtn.disabled = !connected;
+ $("attachBtn").disabled = !connected;
+ ["imageBtn","videoBtn","audioBtn","recordBtn"].forEach(id => $(id).disabled = !connected || recordingActive);
+}
+
+function renderUsers() {
+ userList.replaceChildren();
+ userCount.textContent = onlineUsers.length;
+
+ const colors = ["#e0e7ff","#d1fae5","#ffedd5","#fce7f3"];
+ const textColors = ["#4338ca","#047857","#c2410c","#be185d"];
+
+ onlineUsers.forEach((name,index) => {
+  const row = document.createElement("div");
+  row.className = "user-row";
+
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  avatar.style.background = colors[index % colors.length];
+  avatar.style.color = textColors[index % textColors.length];
+  avatar.textContent = name.charAt(0).toUpperCase();
+
+  const info = document.createElement("div");
+  info.className = "user-info";
+
+  const nameEl = document.createElement("div");
+  nameEl.className = "user-name";
+  nameEl.textContent = name + (name === username ? " (You)" : "");
+
+  const status = document.createElement("div");
+  status.className = "user-status";
+  const dot = document.createElement("span");
+  dot.className = "dot";
+  status.append(dot, document.createTextNode("Online"));
+
+  info.append(nameEl,status);
+  row.append(avatar,info);
+  userList.append(row);
+ });
+}
+
+function scrollToBottom() {
+ messages.scrollTop = messages.scrollHeight;
+}
+
+function addSystemMessage(text) {
+ $("welcome")?.remove();
+ const node = document.createElement("div");
+ node.className = "system-message";
+ node.textContent = text;
+ messages.append(node);
+ scrollToBottom();
+}
+
+function isSafeMediaUrl(url) {
+ return typeof url === "string" &&
+  /^\/api\/(?:media|images)\/[a-fA-F0-9-]+\.(jpg|png|webp|gif|mp4|webm|ogv|mp3|wav|ogg|m4a|aac|3gp|flac)$/.test(url);
+}
+
+function addMessage(sender, content, sentAt) {
+ $("welcome")?.remove();
+
+ const message = document.createElement("div");
+ message.className = "message" + (sender === username ? " mine" : "");
+
+ const meta = document.createElement("div");
+ meta.className = "message-meta";
+
+ const name = document.createElement("span");
+ name.className = "message-name";
+ name.textContent = sender || "Chat";
+
+ const time = document.createElement("span");
+ time.className = "message-time";
+ const date = sentAt ? new Date(sentAt) : new Date();
+ time.textContent = Number.isNaN(date.getTime()) ? "" :
+  date.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"});
+
+ meta.append(name,time);
+
+ const bubble = document.createElement("div");
+ bubble.className = "message-bubble";
+
+ const match = typeof content === "string"
+  ? content.match(/^MEDIA:(IMAGE|VIDEO|AUDIO):(\/api\/(?:media|images)\/[^ ]+)$/)
+  : null;
+
+ if (match && isSafeMediaUrl(match[2])) {
+  const type = match[1];
+  const url = match[2];
+
+  if (type === "IMAGE") {
+   const img = document.createElement("img");
+   img.className = "media-preview";
+   img.src = url;
+   img.alt = "Image shared by " + (sender || "user");
+   img.loading = "lazy";
+   img.addEventListener("click", () => window.open(url,"_blank","noopener,noreferrer"));
+   img.onerror = () => { img.replaceWith(document.createTextNode("Image could not be loaded.")); };
+   bubble.append(img);
+  } else if (type === "VIDEO") {
+   const video = document.createElement("video");
+   video.className = "media-preview";
+   video.src = url;
+   video.controls = true;
+   video.preload = "metadata";
+   video.playsInline = true;
+   bubble.append(video);
+  } else {
+   const audio = document.createElement("audio");
+   audio.className = "media-preview";
+   audio.src = url;
+   audio.controls = true;
+   audio.preload = "metadata";
+   bubble.append(audio);
+  }
+ } else if (typeof content === "string" && content.startsWith("IMAGE:/api/images/")) {
+  // Compatibility with image messages sent by the earlier version.
+  const url = content.substring(6);
+  if (isSafeMediaUrl(url)) {
+   const img = document.createElement("img");
+   img.className = "media-preview";
+   img.src = url;
+   img.alt = "Shared image";
+   img.loading = "lazy";
+   bubble.append(img);
+  } else {
+   bubble.textContent = content;
+  }
+ } else {
+  bubble.textContent = content == null ? "" : String(content);
+ }
+
+ message.append(meta,bubble);
+ messages.append(message);
+ scrollToBottom();
+}
+
+function renderHistory(json) {
+ try {
+  const history = JSON.parse(json);
+  if (!Array.isArray(history)) throw new Error("History is not an array.");
+
+  messages.replaceChildren();
+
+  history.forEach(item => {
+   if (item && item.sender !== undefined && item.content !== undefined) {
+    addMessage(item.sender,item.content,item.sentAt || item.timestamp || null);
+   }
+  });
+
+  scrollToBottom();
+ } catch (error) {
+  console.error("Could not parse chat history:",error);
+  addSystemMessage("Could not load chat history.");
+ }
+}
+
+function handleSocketMessage(raw) {
+ const data = String(raw);
+
+ if (data.startsWith("USERS:")) {
+  onlineUsers = data.substring(6).split(",").filter(Boolean);
+  renderUsers();
+  return;
+ }
+
+ if (data.startsWith("SYSTEM:")) {
+  addSystemMessage(data.substring(7));
+  return;
+ }
+
+ if (data.startsWith("HISTORY:")) {
+  renderHistory(data.substring(8));
+  return;
+ }
+
+ if (data.startsWith("CHAT:")) {
+  try {
+   const item = JSON.parse(data.substring(5));
+   if (item && item.sender !== undefined && item.content !== undefined) {
+    addMessage(item.sender,item.content,item.sentAt || item.timestamp || null);
+   }
+  } catch (error) {
+   console.error("Could not parse chat message:",error);
+  }
+  return;
+ }
+
+ // Compatibility for servers that send raw JSON.
+ if (data.startsWith("[")) {
+  renderHistory(data);
+  return;
+ }
+
+ if (data.startsWith("{")) {
+  try {
+   const item = JSON.parse(data);
+   if (item && item.sender !== undefined && item.content !== undefined) {
+    addMessage(item.sender,item.content,item.sentAt || item.timestamp || null);
+   }
+  } catch (error) {
+   console.error(error);
+  }
+  return;
+ }
+
+ const separator = data.indexOf(":");
+ if (separator > 0) {
+  addMessage(data.substring(0,separator),data.substring(separator+1));
+ } else if (data) {
+  addSystemMessage(data);
+ }
+}
+
+loginForm.addEventListener("submit",event => {
+ event.preventDefault();
+ if (joining) return;
+
+ username = usernameInput.value.trim();
+ if (!username || username.length > 25) {
+  loginError.textContent = "Enter a name between 1 and 25 characters.";
+  return;
+ }
+
+ joining = true;
+ joinBtn.disabled = true;
+ joinBtn.textContent = "Connecting...";
+ loginError.textContent = "";
+
+ const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+ socket = new WebSocket(protocol + "//" + location.host + "/chat");
+
+ socket.onopen = () => {
+  socket.send("JOIN:" + username);
+  loginScreen.style.display = "none";
+  chatApp.style.display = "block";
+  setStatus(true);
+  messageInput.focus();
+ };
+
+ socket.onmessage = event => handleSocketMessage(event.data);
+
+ socket.onerror = () => {
+  loginError.textContent = "Could not connect. Check that the server is running.";
+ };
+
+ socket.onclose = () => {
+  joining = false;
+  setStatus(false);
+  joinBtn.disabled = false;
+  joinBtn.textContent = "Join conversation →";
+  addSystemMessage("Connection closed. Refresh the page to reconnect.");
+  if (chatApp.style.display !== "block") loginScreen.style.display = "grid";
+ };
+});
+
+function clearSelectedFile() {
+ selectedFile = null;
+ selectedType = null;
+ mediaInput.value = "";
+ selectedPreview.style.display = "none";
+ selectedPreview.removeAttribute("src");
+
+ if (previewUrl) {
+  URL.revokeObjectURL(previewUrl);
+  previewUrl = null;
+ }
+}
+
+function showPreview(file,type) {
+ if (previewUrl) URL.revokeObjectURL(previewUrl);
+ previewUrl = URL.createObjectURL(file);
+ selectedPreview.style.display = "block";
+ selectedPreview.removeAttribute("src");
+
+ if (type === "IMAGE") {
+  selectedPreview.src = previewUrl;
+ } else if (type === "VIDEO") {
+  selectedPreview.src = previewUrl;
+ } else {
+  selectedPreview.src = "";
+  selectedPreview.alt = "Selected audio: " + file.name;
+  selectedPreview.style.display = "none";
+ }
+}
+
+function chooseMedia(kind) {
+ const accepted = allowedMime[kind];
+ mediaInput.value = "";
+ mediaInput.dataset.kind = kind;
+ mediaInput.click();
+}
+
+$("attachBtn").addEventListener("click",() => {
+ mediaInput.value = "";
+ mediaInput.dataset.kind = "";
+ mediaInput.click();
+});
+$("imageBtn").addEventListener("click",() => chooseMedia("image"));
+$("videoBtn").addEventListener("click",() => chooseMedia("video"));
+$("audioBtn").addEventListener("click",() => chooseMedia("audio"));
+
+mediaInput.addEventListener("change",() => {
+ const file = mediaInput.files && mediaInput.files[0];
+ if (!file) return;
+
+ if (file.size > MAX_BYTES) {
+  clearSelectedFile();
+  mediaStatus.textContent = "This file exceeds the 25 MB limit.";
+  return;
+ }
+
+ const kind = mediaInput.dataset.kind;
+ let type = null;
+
+ for (const [category,mimes] of Object.entries(allowedMime)) {
+  if (mimes.includes(file.type)) {
+   type = category.toUpperCase();
+   break;
+  }
+ }
+
+ if (!type) {
+  clearSelectedFile();
+  mediaStatus.textContent = "Unsupported media format. Select an approved image, video, or audio file.";
+  return;
+ }
+
+ if (kind && type !== kind.toUpperCase()) {
+  clearSelectedFile();
+  mediaStatus.textContent = "Choose a file matching the attachment button you selected.";
+  return;
+ }
+
+ selectedFile = file;
+ selectedType = type;
+ showPreview(file,type);
+ mediaStatus.textContent = "Selected: " + file.name + " (" + (file.size / 1024 / 1024).toFixed(2) + " MB). Press Send to upload.";
+});
+
+async function uploadMedia(file) {
+ const formData = new FormData();
+ formData.append("file",file);
+
+ const response = await fetch("/api/media",{
+  method:"POST",
+  body:formData
+ });
+
+ let result = {};
+ try { result = await response.json(); } catch (_) {}
+
+ if (!response.ok) {
+  throw new Error(result.error || "Upload failed. Check the server and file size.");
+ }
+
+ if (!result.url || !result.type || !isSafeMediaUrl(result.url)) {
+  throw new Error("The server returned an invalid media URL.");
+ }
+
+ return result;
+}
+
+chatForm.addEventListener("submit",async event => {
+ event.preventDefault();
+
+ if (!socket || socket.readyState !== WebSocket.OPEN) {
+  mediaStatus.textContent = "You are disconnected from the chat.";
+  return;
+ }
+
+ const text = messageInput.value.trim();
+ if (!text && !selectedFile) return;
+
+ sendBtn.disabled = true;
+ $("attachBtn").disabled = true;
+ ["imageBtn","videoBtn","audioBtn","recordBtn"].forEach(id => $(id).disabled = true);
+
+ try {
+  if (selectedFile) {
+   const fileToUpload = selectedFile;
+   const mediaType = selectedType;
+
+   mediaStatus.textContent = "Uploading " + mediaType.toLowerCase() + "...";
+   const result = await uploadMedia(fileToUpload);
+
+   if (socket.readyState !== WebSocket.OPEN) {
+    throw new Error("Chat disconnected during upload.");
+   }
+
+   socket.send("MSG:" + username + ":MEDIA:" + mediaType + ":" + result.url);
+   clearSelectedFile();
+   mediaStatus.textContent = "Media sent successfully! 💜";
+  }
+
+  if (text && socket.readyState === WebSocket.OPEN) {
+   socket.send("MSG:" + username + ":" + text);
+   messageInput.value = "";
+  }
+ } catch (error) {
+  mediaStatus.textContent = error.message || "Could not send your message.";
+ } finally {
+  const connected = socket && socket.readyState === WebSocket.OPEN;
+  sendBtn.disabled = !connected;
+  $("attachBtn").disabled = !connected;
+  ["imageBtn","videoBtn","audioBtn"].forEach(id => $(id).disabled = !connected);
+  recordBtn.disabled = !connected || recordingActive;
+  messageInput.focus();
+ }
+});
+
+function chooseRecorderMime() {
+ if (!window.MediaRecorder) return "";
+ const choices = ["audio/webm;codecs=opus","audio/webm","audio/mp4"];
+ return choices.find(type => MediaRecorder.isTypeSupported(type)) || "";
+}
+
+recordBtn.addEventListener("click",async () => {
+ if (recordingActive) return;
+
+ if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+  mediaStatus.textContent = "Voice recording is not supported in this browser or connection.";
+  return;
+ }
+
+ try {
+  recordingStream = await navigator.mediaDevices.getUserMedia({audio:true});
+  recordingChunks = [];
+
+  const mimeType = chooseRecorderMime();
+  mediaRecorder = new MediaRecorder(
+   recordingStream,
+   mimeType ? {mimeType} : undefined
+  );
+
+  mediaRecorder.ondataavailable = event => {
+   if (event.data && event.data.size > 0) recordingChunks.push(event.data);
+  };
+
+  mediaRecorder.onerror = () => {
+   mediaStatus.textContent = "A recording error occurred.";
+   finishRecordingUI();
+  };
+
+  mediaRecorder.onstop = () => {
+   const actualType = mediaRecorder.mimeType || mimeType || "audio/webm";
+   const blob = new Blob(recordingChunks,{type:actualType});
+
+   if (blob.size > MAX_BYTES) {
+    clearSelectedFile();
+    mediaStatus.textContent = "Recording exceeds 25 MB. Please record a shorter message.";
+   } else if (blob.size === 0) {
+    mediaStatus.textContent = "The recording was empty. Please try again.";
+   } else {
+    const extension = actualType.includes("mp4") ? "m4a" : "webm";
+    selectedFile = new File([blob],"voice-message-" + Date.now() + "." + extension,{type:actualType});
+    selectedType = "AUDIO";
+    mediaStatus.textContent = "Voice message ready (" + (blob.size / 1024).toFixed(0) + " KB). Press Send to share it.";
+    selectedPreview.style.display = "none";
+    selectedPreview.removeAttribute("src");
+   }
+
+   finishRecordingUI();
+  };
+
+  mediaRecorder.start();
+  recordingActive = true;
+  recordBtn.disabled = true;
+  stopRecordBtn.hidden = false;
+  recordingStatus.textContent = "Recording...";
+  mediaStatus.textContent = "Recording your voice. Press Stop when finished.";
+  ["imageBtn","videoBtn","audioBtn"].forEach(id => $(id).disabled = true);
+ } catch (error) {
+  mediaStatus.textContent = "Microphone access failed. Allow microphone permission and try again.";
+  finishRecordingUI();
+ }
+});
+
+stopRecordBtn.addEventListener("click",() => {
+ if (mediaRecorder && recordingActive && mediaRecorder.state !== "inactive") {
+  mediaRecorder.stop();
+ }
+});
+
+function finishRecordingUI() {
+ recordingActive = false;
+ stopRecordBtn.hidden = true;
+ recordingStatus.textContent = "";
+
+ if (recordingStream) {
+  recordingStream.getTracks().forEach(track => track.stop());
+  recordingStream = null;
+ }
+
+ const connected = socket && socket.readyState === WebSocket.OPEN;
+ recordBtn.disabled = !connected;
+ ["imageBtn","videoBtn","audioBtn"].forEach(id => $(id).disabled = !connected);
+ $("attachBtn").disabled = !connected;
+ sendBtn.disabled = !connected;
+}
+
+window.addEventListener("beforeunload",() => {
+ if (recordingActive && mediaRecorder && mediaRecorder.state !== "inactive") {
+  mediaRecorder.stop();
+ }
+ if (recordingStream) recordingStream.getTracks().forEach(track => track.stop());
+ if (previewUrl) URL.revokeObjectURL(previewUrl);
+});
+</script>
+</body>
+</html>
