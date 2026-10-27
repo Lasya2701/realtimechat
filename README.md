@@ -2,7 +2,7 @@
 
 **A web-based real-time chat application built using Java, Spring Boot, WebSockets, and MySQL.**
 
-🌐 **Live Demo:** Connect — Real-Time Chat
+🌐 **Live Demo:** 🌐 **Live Demo:** [Connect — Real-Time Chat](https://realtimechat-z7kb.onrender.com/)
 
 📂 **GitHub Repository:** https://github.com/Lasya2701/realtimechat
 
